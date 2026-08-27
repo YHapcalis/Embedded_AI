@@ -1,0 +1,35 @@
+// Bate_Camera 固件加载脚本
+// 用法: renode -P 12345 -e "i @load_bate_camera.resc"
+
+using sysbus
+logLevel 3
+
+// 创建机器并加载 STM32F4 平台
+mach create "bate_camera"
+machine LoadPlatformDescription @platforms/cpus/stm32f4.repl
+
+// 设置 SysTick 频率 (STM32F407 @ 168MHz -> 168MHz/8 = 21MHz)
+// 注意: Renode 的 SysTick 默认 72MHz，但我们的芯片跑 168MHz
+cpu.systickFrequency 168000000
+
+// 加载固件 ELF
+sysbus LoadELF @../../Projects_F407/Bate_Camera/build/Debug/Bate_Camera
+
+// 配置 USART1 输出到终端 (调试串口)
+usart1 Enable
+
+// 连接虚拟摄像头 (测试图案生成器)
+// TODO: 创建并连接 OV7670 虚拟外设
+// camera: Virtual.Camera @ sysbus
+
+// 设置 LCD 帧缓冲监听 (NT35510 地址范围)
+// TODO: 创建 NT35510 显示外设
+
+// 启动仿真
+start
+
+// 显示帮助信息
+echo "========================================"
+echo "Bate_Camera 仿真已启动"
+echo "连接到 Monitor:  telnet localhost 12345"
+echo "========================================"

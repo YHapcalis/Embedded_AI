@@ -1,0 +1,43 @@
+# PID 调参迭代场景
+#
+# 监控 PID 控制器的目标值、实际值、输出量，
+# 验证系统响应满足: 上升时间、超调量、稳态误差。
+#
+# 适用:
+#   - 温度 PID 调参
+#   - 电机速度 PID 调参
+#   - 任何闭环控制系统的参数迭代
+
+name: "PID 调参"
+description: "调整 PID 参数使系统响应满足动态性能指标"
+
+targets:
+  # 1. 稳态误差：后半段偏差在阈值内
+  - variable: "pid_error"
+    check: stable_after
+    params:
+      threshold: 5.0           # 稳态误差 < 5
+      min_stable_samples: 5    # 至少 5 个稳定样本
+
+  # 2. 控制输出在合理范围内
+  - variable: "pid_output"
+    check: range
+    params:
+      min: 0
+      max: 1000               # 根据你的 PWM/输出范围调整
+
+  # 3. 目标值和实际值最终接近（误差收敛）
+  - variable: "pid_error"
+    check: monotonic
+    params:
+      direction: "decreasing"  # 误差越来越小
+
+source_files:
+  - "Core/Src/pid.c"
+  - "Core/Src/motor.c"        # 如果有
+
+notes: |
+  前置条件：
+    1. PID 控制循环已在运行
+    2. pid_error、pid_output、pid_setpoint、pid_actual 是全局变量
+    3. 系统有足够的运行时间达到稳态

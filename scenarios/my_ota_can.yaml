@@ -1,0 +1,68 @@
+# MY_OTA_GUI CAN 通信监控
+#
+# F103 通过 CAN 总线发送传感器数据 (ID=0x12, 50Hz) 到 F407。
+# F407 解析后存入 g_can_sensor 结构体。
+#
+# 监控的全局变量:
+#   g_can_sensor.valid     - 1=已收到 F103 数据
+#   g_can_sensor.tick      - 最后接收时间戳
+#   g_can_sensor.temperature - 温度 (float)
+#   g_can_sensor.humidity  - 湿度 (float)
+#   g_can_sensor.knob      - 旋钮值 0-255
+#   g_can_sensor.key_event - 按键事件
+#   g_can_sensor_pending   - 数据待处理标志
+
+name: "CAN 通信链路验证"
+description: "验证 F103 通过 CAN 向 F407 发送传感器数据——g_can_sensor 持续更新"
+
+targets:
+  # 1. valid 标志必须为 1（F407 已收到至少一帧 F103 数据）
+  - variable: "g_can_sensor.valid"
+    check: range
+    params:
+      min: 1
+      max: 1
+
+  # 2. temperature 在合理范围（室温 10~40°C）
+  - variable: "g_can_sensor.temperature"
+    check: range
+    params:
+      min: 10.0
+      max: 40.0
+
+  # 3. humidity 在合理范围（20~90%）
+  - variable: "g_can_sensor.humidity"
+    check: range
+    params:
+      min: 20.0
+      max: 90.0
+
+  # 4. knob 在 0~255 范围内
+  - variable: "g_can_sensor.knob"
+    check: range
+    params:
+      min: 0
+      max: 255
+
+  # 5. tick 持续增长（CAN 数据持续到达）
+  - variable: "g_can_sensor.tick"
+    check: monotonic
+    params:
+      direction: "increasing"
+
+  # 6. valid=1 + tick 递增已证明 CAN 通信正常
+  # g_can_sensor_pending 是瞬态标志（GUI 立即消费），0.5s 采样抓不到不表示异常
+
+source_files: []
+
+notes: |
+  前置条件:
+    1. F407 (MY_OTA_GUI) 和 F103 (MY_OTA_GUI_F103) 均已烧录并运行
+    2. CAN 总线物理连接正常 (PA11=RX, PA12=TX, 500kbps)
+    3. F103 节点正在发送传感器数据帧 (ID=0x12)
+    4. F407 的 canRxTask 已开始运行
+
+  注意:
+    - g_can_sensor 是结构体，GDB 表达式写 g_can_sensor.valid 等字段名
+    - float 类型需特别处理（32位 IEEE754）
+    - 如 valid==0 说明 CAN 通信未建立，检查硬件连接

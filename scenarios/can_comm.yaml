@@ -1,0 +1,41 @@
+# CAN 通信验证场景
+#
+# 监控 CAN 接收消息缓冲区和错误计数器，
+# 验证 CAN 通信链路正常。
+#
+# 适用:
+#   - CAN 初始化配置验证
+#   - 通信时序调优
+#   - 滤波器配置验证
+
+name: "CAN 通信链路验证"
+description: "验证 CAN 总线通信正常——有数据到达且无错误"
+
+targets:
+  # 主目标：CAN 数据有变化（收到消息）
+  - variable: "CAN_RxMsg.Data[0]"
+    check: change_detected
+    params: {}
+
+  # 辅助：CAN 错误计数为 0
+  - variable: "hcan1.ErrorCode"
+    check: range
+    params:
+      min: 0
+      max: 0
+
+  # 辅助：CAN 状态为正常
+  - variable: "hcan1.State"
+    check: range
+    params:
+      min: 0       # HAL_CAN_STATE_READY = 0x00
+      max: 1       # HAL_CAN_STATE_LISTENING = 0x01
+
+source_files:
+  - "Core/Src/can.c"
+  - "Core/Src/main.c"
+
+notes: |
+  前置条件：
+    1. CAN 总线已连接（另一节点或回环模式）
+    2. CAN_RxMsg 是全局变量（已在 can.c 中定义）

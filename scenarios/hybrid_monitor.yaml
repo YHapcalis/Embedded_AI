@@ -1,0 +1,88 @@
+# 混合监控场景 — MY_OTA_GUI
+#
+# 双后端:
+#   Renode: LCD 画面像素 (lcd_nonzero_pixels)
+#   SWD:   CAN 传感器数据 (g_can_sensor.*)
+#
+# 虚拟变量:
+#   _lcd_active_pixels  — Renode 追踪 LCD 已绘制的非零像素数
+#   _lcd_screen_updated — LCD 在监控期内有新绘制
+
+name: "混合监控 — LCD + CAN + 系统状态"
+description: "Renode 监控 LCD 渲染，SWD 监控 CAN 传感器，混合后端并行采集"
+
+targets:
+  # ── LCD / 摄像头 (SWD 可读, 在 STM32 SRAM 中) ──
+  - variable: "ov_frame"
+    check: change_detected
+    width: 8           # volatile u8
+    params: {}
+
+  - variable: "g_camera_active"
+    check: range
+    width: 8           # volatile uint8_t
+    params:
+      min: 1
+      max: 1
+
+  - variable: "draw_buf[0]"
+    check: change_detected
+    width: 8
+    params: {}
+
+  # ── LCD 画面 (Renode 仿真器, 虚拟变量) ──
+  - variable: "_lcd_active_pixels"
+    check: range
+    params:
+      min: 1
+      max: 9999999
+
+  - variable: "_lcd_screen_updated"
+    check: change_detected
+    params: {}
+
+  # ── CAN 传感器数据 (SWD 真硬件) ──
+  - variable: "g_can_sensor.valid"
+    check: range
+    width: 8
+    params:
+      min: 1
+      max: 1
+
+  - variable: "g_can_sensor.temperature"
+    check: range
+    type: float
+    params:
+      min: 10.0
+      max: 50.0
+
+  - variable: "g_can_sensor.humidity"
+    check: range
+    type: float
+    params:
+      min: 20.0
+      max: 90.0
+
+  - variable: "g_can_sensor.knob"
+    check: range
+    width: 8
+    params:
+      min: 0
+      max: 255
+
+  - variable: "g_can_sensor.tick"
+    check: monotonic
+    params:
+      direction: "increasing"
+
+  # ── 系统运行状态 ──
+  - variable: "uwTick"
+    check: change_detected
+    params: {}
+
+source_files: []
+
+notes: |
+  LCD 像素通过 Renode 仿真器外设模型读取。
+  CAN 数据通过 SWD 真硬件读取。
+  需要 --backend hybrid 运行。

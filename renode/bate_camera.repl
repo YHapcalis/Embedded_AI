@@ -1,0 +1,45 @@
+// Bate_Camera 开发板平台定义
+// 基于 KF56-12 金星开发板 (STM32F407ZGT6)
+//
+// 外设:
+//   NT35510 LCD via FSMC (NE4 @ 0x6C000000)
+//   OV7670 摄像头 via GPIO bit-bang + AL422B FIFO
+//   USART1 (PA9/PA10) 调试串口
+
+using "platforms/cpus/stm32f4.repl"
+
+// ─── 板载 LED ───────────────────────────────────────────────────
+led0: Miscellaneous.LED @ gpioPortF
+    -> gpioPortF@9       // PF9 = LED0 (DS0), 低电平亮
+
+led1: Miscellaneous.LED @ gpioPortF
+    -> gpioPortF@10      // PF10 = LED1 (DS1), 低电平亮
+
+beeper: Miscellaneous.LED @ gpioPortF
+    -> gpioPortF@8       // PF8 = BEEP
+
+// ─── NT35510 LCD via FSMC NE4 ──────────────────────────────────
+// 地址映射: 0x6C00007E (A6 作 RS)
+// 写命令: *(volatile uint16_t *)0x6C00007E = cmd
+// 写数据: *(volatile uint16_t *)0x6C000080 = data
+lcd: Video.NT35510 @ sysbus 0x6C000000
+    // 通过添加自定义处理来监控 FSMC 地址范围的写入
+    // 注意: 这需要实现 NT35510 外设模型
+    // 目前先用 Memory.MappedMemory 占位
+
+// ─── OV7670 摄像头 ─────────────────────────────────────────────
+// AL422B FIFO 通过 GPIO bit-bang 读取
+// 驱动见 ov7670.c: 使用 GPIO 引脚模拟时序读取像素数据
+//
+// TODO: 创建虚拟摄像头外设，注入测试图像
+
+// ─── 虚拟 EEPROM / 传感器 (预留) ──────────────────────────────
+// i2c1 / i2c2 已在 stm32f4.repl 中定义
+
+sysbus:
+    init:
+        // 覆盖 SVD 中的默认值，防止外设初始化卡住
+        Tag <0x40023C00, 0x40023FFF> "FlashController"
+        Tag <0x50000010, 0x5000003F> "USB_OTG_FS"
+        Tag <0x40006400, 0x400067FF> "CAN1"
+        Tag <0x40006800, 0x40006BFF> "CAN2"

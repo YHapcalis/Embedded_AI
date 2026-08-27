@@ -1,0 +1,59 @@
+# 全链路监控场景 — MY_OTA_GUI
+#
+# 监控项:
+#   SWD: CAN 传感器数据 (g_can_sensor.*)
+#   Renode: LCD 画面 (通过 Renode 外设接口)
+#   系统状态: uwTick, FreeRTOS 任务状态
+#
+# 模式: 纯监控，不修改代码
+
+name: "全链路监控 — LCD + CAN + 系统状态"
+description: "监控 LCD 画面渲染、CAN 总线传感器数据、系统运行状态，持续 20 秒"
+
+targets:
+  # ── CAN 传感器数据 (SWD 真硬件) ──
+  - variable: "g_can_sensor.valid"
+    check: range
+    width: 8           # uint8_t 字段
+    params:
+      min: 1
+      max: 1
+
+  - variable: "g_can_sensor.temperature"
+    check: range
+    type: float        # IEEE754 32-bit float
+    params:
+      min: 10.0
+      max: 50.0
+
+  - variable: "g_can_sensor.humidity"
+    check: range
+    type: float
+    params:
+      min: 20.0
+      max: 90.0
+
+  - variable: "g_can_sensor.knob"
+    check: range
+    width: 8           # uint8_t
+    params:
+      min: 0
+      max: 255
+
+  - variable: "g_can_sensor.tick"
+    check: monotonic
+    params:
+      direction: "increasing"
+
+  # ── 系统运行状态 ──
+  - variable: "uwTick"
+    check: change_detected
+    params: {}
+
+source_files: []
+# 无 source_files = 不允许修改文件
+
+notes: |
+  纯监控任务，不修改任何代码。
+  LCD 画面通过 Renode 仿真器后端读取帧缓冲。
+  CAN 数据通过 SWD 真硬件读取。

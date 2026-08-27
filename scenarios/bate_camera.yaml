@@ -1,0 +1,44 @@
+# Bate_Camera 摄像头工作状态验证
+#
+# 监控 OV7670 摄像头的帧计数器和帧状态。
+# 验证摄像头正在以正常帧率采集图像。
+#
+# 实测基线（2026-07-09）:
+#   ov_frame 在 3s 内从 153 递增到 234 = 81 帧 → 27fps
+#   ov_sta 在 0.3s 采样间隔下基本为 1（采样率不足以捕捉 0→2 跳变）
+#
+# 适用:
+#   - 摄像头驱动验证
+#   - 帧率监控（修改分辨率/窗口后性能是否变化）
+#   - 中断响应调试
+
+name: "摄像头工作状态验证"
+description: "验证 OV7670 摄像头正在正常采集图像——帧计数递增、帧率在合理范围"
+
+targets:
+  # 1. ov_frame 帧计数单调递增 → 新帧持续到达
+  - variable: "ov_frame"
+    check: monotonic
+    params:
+      direction: "increasing"
+
+  # 2. ov_frame 变化率 = 帧率 → QVGA 下预期 15~50fps
+  - variable: "ov_frame"
+    check: rate
+    params:
+      target_min: 15          # 最低 15fps（光线不足时掉帧底线）
+      target_max: 50          # 最高 50fps（OV7670 QVGA 上限）
+
+source_files:
+  - "Core/Src/ov7670.c"
+  - "Core/Src/main.c"
+
+notes: |
+  前置条件：
+    1. OV7670 摄像头已初始化成功
+    2. ov_sta 和 ov_frame 是 ov7670.c 中的 volatile 全局变量
+    3. 采样间隔建议 0.2~0.5s，时长建议 3s 以上
+
+  已知限制:
+    - ov_sta 变化太快（~33ms/周期），0.3s 采一次抓不到跳变
+      如需监控 ov_sta，需降低采样间隔到 10ms 以下

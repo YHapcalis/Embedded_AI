@@ -1,0 +1,16 @@
+using sysbus
+logLevel 0
+
+mach create
+machine LoadPlatformDescription @platforms/cpus/stm32f4.repl
+
+sysbus WriteDoubleWord 0x40023800 0x03030301
+
+sysbus LoadELF E:/ST/STM32/MY_workspace/Projects_F407/Bate_Camera/build/Debug/Bate_Camera
+
+// 读取复位向量并设置 PC
+// SP = flash[0x00], PC = flash[0x04]
+cpu SP (sysbus ReadDoubleWord 0x08000000)
+cpu PC (sysbus ReadDoubleWord 0x08000004)
+
+start

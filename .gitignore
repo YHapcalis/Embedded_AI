@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 运行时产物（AI 决策记忆 / 轨迹导出 / 日志）
+.harness_memory/
+traces/
+*.log
+
+# Renode 编译产物
+renode/**/*.dll
+
+# VS Code
+.vscode/

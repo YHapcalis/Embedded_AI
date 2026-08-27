@@ -1,0 +1,31 @@
+# LED 闪烁频率验证场景
+#
+# 让 AI 调整代码，使 PA5 上的 LED 以指定频率闪烁。
+# 通过监控 GPIOA_ODR 寄存器的 bit5 翻转频率来验证。
+#
+# 适用:
+#   - LED 闪烁频率调参
+#   - HAL_Delay / 定时器参数迭代
+#   - 空循环延时精度验证
+
+name: "LED 闪烁频率调优"
+description: "调整 main.c 中的延时/定时器参数，使 GPIOA pin5 输出目标频率的方波"
+
+targets:
+  # 主目标：频率达标
+  - variable: "GPIOA_ODR"
+    check: frequency
+    params:
+      target_hz: 2.0          # 目标 2Hz（周期 500ms）
+      tolerance: 0.15         # 允许 15% 误差
+
+  # 辅助检查：GPIOA_ODR 在观察期内必须变化
+  - variable: "GPIOA_ODR"
+    check: change_detected
+    params: {}
+
+source_files:
+  - "Core/Src/main.c"
+  - "Core/Src/gpio.c"
+
+expected_waveform: "500ms 周期，250ms HIGH + 250ms LOW，占空比 50%"
