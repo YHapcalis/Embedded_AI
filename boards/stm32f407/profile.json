@@ -10,8 +10,8 @@
   "build_dir": "build/Debug",
   "elf": "build/Debug/MY_OTA_GUI.elf",
   "flash_sections": [
-    {"file": "build/Debug/bootloader.elf", "addr": "0x08000000"},
-    {"file": "build/Debug/MY_OTA_GUI.elf", "addr": "0x08010000"},
+    {"file": "build/Debug/bootloader.elf"},
+    {"file": "build/Debug/MY_OTA_GUI.elf"},
     {"file": "build/Debug/signature.bin",  "addr": "0x080DFF80"},
     {"file": "param_init.bin",             "addr": "0x080E0000"}
   ],

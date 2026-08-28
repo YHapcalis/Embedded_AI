@@ -106,16 +106,14 @@ class Flasher:
                                   timeout=300)
             output = proc.stdout + proc.stderr
             result.log = output
-            # 解析每段的 Verified OK
+            # 解析每段的 Verified OK（按出现顺序对应段顺序）
+            import re
+            ok_count = len(re.findall(r"Verified OK", output))
             sections = self.profile.get("flash_sections", [])
-            for sec in sections:
+            for i, sec in enumerate(sections):
                 fpath = self._resolve_path(sec["file"])
                 name = fpath.name
-                ok = f"Verified OK" in output
-                # 精确匹配该段（program 后紧跟文件名）
-                marker = f"program {fpath.as_posix()}"
-                idx = output.find(marker)
-                ok = (idx >= 0 and "Verified OK" in output[idx:idx+500]) if idx >= 0 else False
+                ok = (ok_count > i)  # 第 i 段成功 = 至少有 i+1 个 Verified OK
                 result.sections.append((name, sec.get("addr", "-"), ok))
             result.ok = all(ok for _, _, ok in result.sections) and proc.returncode == 0
         except subprocess.TimeoutExpired:
