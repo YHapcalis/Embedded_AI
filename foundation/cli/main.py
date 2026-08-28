@@ -1,14 +1,14 @@
 """
-harness_cli.py — harness 统一 CLI 入口
+cli/main.py — foundation CLI 统一入口
 
 封装嵌入式 AI 工作流的全部命令，供人类或 AI 调用。
 对应 STANDARD_PROCESS 准备阶段①（确认芯片 + 环境检查）。
 
 用法:
-    python -m harness env check          # 环境自检
-    python -m harness openocd list       # 查看 OpenOCD 多分支
-    python -m harness chip-confirm       # 确认目标芯片类型
-    python -m harness --help             # 全部命令
+    python -m foundation env check          # 环境自检
+    python -m foundation openocd list       # 查看 OpenOCD 多分支
+    python -m foundation chip-confirm       # 确认目标芯片类型
+    python -m foundation --help             # 全部命令
 
 设计原则:
     - 每个子命令 = 流程中的一步（映射 STANDARD_PROCESS）
@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 # 允许直接运行脚本时也能找到 core 包
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.env_probe import EnvironmentProbe
 from core.openocd_registry import OpenOCDRegistry
@@ -160,9 +160,9 @@ def _map_environment(chip: dict) -> dict:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="harness",
+        prog="foundation",
         description="嵌入式 AI 开发工作流 — 统一命令行入口",
-        epilog="示例: python -m harness env check | python -m harness chip-confirm --mcu stm32f407 --arch cortex_m4",
+        epilog="示例: python -m foundation env check | python -m foundation chip-confirm --mcu stm32f407 --arch cortex_m4",
     )
     sub = parser.add_subparsers(dest="command", help="子命令")
 

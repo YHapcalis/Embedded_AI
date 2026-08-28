@@ -1,7 +1,7 @@
 """
-mcp_server.py — harness MCP 服务（第 1 层：跨工具标准接口）
+mcp/server.py — foundation MCP 服务（第 1 层：跨工具标准接口）
 
-把 harness 引擎能力暴露为 MCP（Model Context Protocol）标准工具，
+把 foundation 引擎能力暴露为 MCP（Model Context Protocol）标准工具，
 任意支持 MCP 的 AI 工具（Claude Code / Trae / Cursor / CodeBuddy 等）
 一条命令即可接入并直接驱动硬件调试。
 
@@ -9,10 +9,10 @@ mcp_server.py — harness MCP 服务（第 1 层：跨工具标准接口）
 
 用法:
     # 直接启动 (stdio)
-    python mcp_server.py
+    python -m foundation.mcp.server
 
     # Claude Code 接入
-    claude mcp add harness-ai -- python E:/嵌入式AI工作流/harness/mcp_server.py
+    claude mcp add foundation-ai -- python E:/嵌入式AI工作流/foundation/mcp/server.py
 
     # Trae / Cursor 等在 MCP 配置界面添加同一条命令
 
@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 # 保证能导入 core 包
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.env_probe import EnvironmentProbe
 from core.openocd_registry import OpenOCDRegistry
@@ -90,7 +90,7 @@ _session = _DebugSession()
 
 def create_server():
     mcp = MCP_CLASS(
-        "harness-ai",
+        "foundation-ai",
         instructions=(
             "嵌入式 AI 开发工作流工具。"
             "所有硬件操作前必须先调用 chip_identify 或 env_check 确认连接。"
