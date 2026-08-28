@@ -185,6 +185,9 @@ class HardFaultDiagnosis:
             if not self.session.connect():
                 return DiagnosisReport("HardFault 诊断报告",
                                        conclusion="❌ 无法连接 OpenOCD，请检查调试器与目标板")
+        # 冻结看门狗：fault 后 CPU 不再喂狗，IWDG 会在诊断窗口内复位芯片
+        # 清空 CFSR 并导致 OpenOCD 失步（2026-08-29 真机复现时发现）
+        self.session.freeze_watchdogs()
         self.session.halt()
         time.sleep(0.05)
 
@@ -355,6 +358,7 @@ class HangDiagnosis:
             if not self.session.connect():
                 return DiagnosisReport("挂死 / 跑飞诊断报告",
                                        conclusion="❌ 无法连接 OpenOCD")
+        self.session.freeze_watchdogs()  # halt 期间防 IWDG 复位打断采样
 
         pcs = []
         for i in range(self.samples):
@@ -440,6 +444,7 @@ class MemoryDiagnosis:
         if not self.session.is_connected():
             if not self.session.connect():
                 return DiagnosisReport("内存诊断报告", conclusion="❌ 无法连接 OpenOCD")
+        self.session.freeze_watchdogs()
         self.session.halt()
 
         sram_lo, sram_hi = SRAM_RANGES.get(self.target, SRAM_RANGES["stm32f4"])

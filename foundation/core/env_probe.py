@@ -207,21 +207,42 @@ class EnvironmentProbe:
 
     @staticmethod
     def _check_openocd_tcl() -> bool:
-        """检查本地是否有 OpenOCD TCL 端口(6666)在监听且目标已连接"""
-        try:
-            import socket
+        """检查 6666 端口的 OpenOCD 实例是否真实可用。
+
+        判据（两级）：
+        1. target names 有应答（端口级）
+        2. 链路健康：Cortex-M 目标必须能读到 CPUID（0xE000ED00）
+           —— 防止"坏实例占坑导致误报连接成功"
+              （2026-08-29 真机复现验收时发现：遗留坏实例端口通但
+               SWD 链路已断，寄存器值全是缓存）
+        RISC-V/Xtensa 目标无 CPUID，读到 target names 即通过。
+        """
+        import re
+        import socket
+
+        def _tcl(command: str) -> bytes:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(2)
                 s.connect(("127.0.0.1", 6666))
-                s.sendall(b"target names\x1a")
+                s.sendall((command + "\x1a").encode("utf-8"))
                 data = b""
                 while True:
                     chunk = s.recv(4096)
-                    if not chunk or b"\x1a" in chunk:
-                        data += chunk
-                        break
                     data += chunk
-                return b"cpu" in data or b"target" in data.lower()
+                    if not chunk or b"\x1a" in chunk:
+                        break
+                return data
+
+        try:
+            names = _tcl("target names")
+            if not (b"cpu" in names or b"target" in names.lower()):
+                return False
+            low = names.lower()
+            if b"riscv" in low or b"esp" in low or b"xtensa" in low:
+                return True
+            # Cortex-M：链路健康 = CPUID 可读（8 位以上十六进制响应）
+            resp = _tcl("mdw 0xE000ED00")
+            return bool(re.search(rb"[0-9a-fA-F]{8}", resp))
         except Exception:
             return False
 

@@ -44,6 +44,10 @@ except ImportError:
     from openocd_registry import OpenOCDRegistry
 
 
+# Cortex-M CPUID 地址（链路健康判据：能读到此寄存器 = SWD/JTAG 链路真实可用）
+CORTEX_M_CPUID = 0xE000ED00
+
+
 # ─── Cortex-M 内核外设寄存器地址（ARM 官方固定）──────────────
 
 SCB_CFSR    = 0xE000ED28   # 可配置故障状态寄存器
@@ -77,26 +81,106 @@ class OpenOCDProcess:
         except Exception:
             return False
 
-    def find_openocd(self) -> Optional[str]:
-        """通过 Registry 选择 OpenOCD 分支（架构无关的关键）"""
+    def find_openocd(self) -> Optional[object]:
+        """通过 Registry 选择 OpenOCD 分支。
+
+        返回完整 OpenOCDEntry（含 exe_path 和 script_dir）。
+        修复：旧版只返回 exe_path，丢失 script_dir 导致冷启动时
+        OpenOCD 找不到 interface/stlink-dap.cfg（2026-08-29 真机复现时发现）。
+        """
         reg = OpenOCDRegistry()
         entry = reg.resolve(self.board_profile)
-        return entry.exe_path if entry else None
+        return entry if entry else None
+
+    @staticmethod
+    def _link_healthy(client, retries: int = 5, delay: float = 0.3) -> bool:
+        """链路健康判据（诚实原则：TCL 端口通 ≠ 目标链路通）。
+
+        Cortex-M 目标：必须能通过调试链路读到 CPUID。
+        RISC-V/Xtensa 目标：无 CPUID，能应答 target names 即视为健康。
+        带重试窗口：connect_assert_srst 配置下，init 后芯片仍在复位释放期，
+        立即读会失败（2026-08-29 冷启动验证实测）。
+        """
+        for i in range(retries):
+            if not client.is_connected():
+                return False
+            names = (client._tcl_send("target names") or "").lower()
+            if "riscv" in names or "esp" in names or "xtensa" in names:
+                return True
+            if client.read_memory(CORTEX_M_CPUID, width=32) is not None:
+                return True
+            if i < retries - 1:
+                time.sleep(delay)
+        return False
+
+    def _terminate_stale(self):
+        """清理遗留的坏 openocd 进程（仅当端口属主确认为 openocd 镜像）。
+
+        背景：验收复现时发现遗留坏实例占住 TCL 端口、SWD 链路已断，
+        新会话拿到的是缓存寄存器值。只杀镜像名为 openocd 的进程，避免误伤。
+        """
+        try:
+            if sys.platform == "win32":
+                out = subprocess.run(["netstat", "-ano", "-p", "TCP"],
+                                     capture_output=True, text=True,
+                                     timeout=10).stdout or ""
+                for line in out.splitlines():
+                    if f":{self.tcl_port} " in line and "LISTENING" in line:
+                        pid = line.split()[-1]
+                        img = subprocess.run(
+                            ["tasklist", "/FI", f"PID eq {pid}"],
+                            capture_output=True, text=True, timeout=10).stdout or ""
+                        if "openocd" in img.lower():
+                            subprocess.run(["taskkill", "/PID", pid, "/F"],
+                                           capture_output=True, timeout=10)
+                            # 强杀会中断 SWD 事务，ST-Link 固件需要恢复窗口
+                            # （实测：杀完立即重拉 → 新实例 CTRL/STAT 全失败）
+                            time.sleep(2.0)
+            else:
+                # Unix：只匹配带 tcl_port 参数的 openocd，保守清理
+                subprocess.run(["pkill", "-f", "openocd.*tcl_port"],
+                               capture_output=True, timeout=5)
+                time.sleep(0.5)
+        except Exception:
+            pass  # 清理失败不假装成功，后续启动会如实报错
 
     def start(self) -> bool:
-        """启动 OpenOCD（如果未运行）"""
+        """启动 OpenOCD（如果未运行）。
+
+        端口已占用时先做链路健康检查：
+        - 健康（能读到 CPUID）→ 直接复用现有实例
+        - 不健康（坏实例占坑）→ 清理后自行启动，防止拿到缓存值
+        """
         if self.is_running():
-            return True
-        exe = self.find_openocd()
-        if not exe:
+            probe = TCLClient(port=self.tcl_port)
+            if self._link_healthy(probe):
+                return True
+            print("[session] TCL 端口被占用但目标链路不健康，清理遗留实例...",
+                  file=sys.stderr)
+            self._terminate_stale()
+            if self.is_running():
+                print("[session] 遗留实例无法清理，启动失败", file=sys.stderr)
+                return False
+
+        entry = self.find_openocd()
+        if not entry:
             return False
-        # 基础命令：启动 TCL 端口（board cfg 由 Profile 提供，暂用默认）
-        cmd = [exe, "-c", f"tcl_port {self.tcl_port}",
-               "-c", "bindto 0.0.0.0"]
-        # 如果有板卡配置，附加
+
+        # 脚本搜索路径：Profile 显式指定 > Registry 记录的 script_dir
+        scripts = (self.board_profile.get("openocd_scripts")
+                   or getattr(entry, "script_dir", "") or "")
+
         cfg = self.board_profile.get("openocd_cfg")
         if cfg and Path(cfg).exists():
-            cmd = [exe, "-f", cfg, "-c", f"bindto 0.0.0.0"]
+            cmd = [entry.exe_path, "-f", cfg,
+                   "-c", f"tcl_port {self.tcl_port}", "-c", "bindto 0.0.0.0"]
+        else:
+            cmd = [entry.exe_path,
+                   "-c", f"tcl_port {self.tcl_port}", "-c", "bindto 0.0.0.0"]
+        # 修复核心：注入 -s，否则 ST 分支找不到 interface/stlink-dap.cfg
+        if scripts and Path(scripts).exists():
+            cmd += ["-s", scripts]
+
         try:
             self.process = subprocess.Popen(
                 cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -256,8 +340,15 @@ class DebugSession:
         self.target_name = target
         self.session_id = f"sess_{int(time.time())}"
         self._connected = True
-        return {"session_id": self.session_id, "arch": self.arch,
+        info = {"session_id": self.session_id, "arch": self.arch,
                 "target_name": self.target_name}
+        # 链路健康探测（诚实原则）：端口通但读不到 CPUID = 链路故障/坏实例
+        info["link_healthy"] = OpenOCDProcess._link_healthy(self.ocd)
+        if not info["link_healthy"]:
+            print("[session] 警告: TCL 端口已连接但目标内存不可读"
+                  "（SWD 链路可能故障），后续内存操作预计失败",
+                  file=sys.stderr)
+        return info
 
     def is_connected(self) -> bool:
         return self._connected and self.ocd.is_connected()
@@ -318,6 +409,27 @@ class DebugSession:
 
     # ── Fault 状态读取 ────────────────────────────────────
 
+    # 看门狗调试冻结位（halt 期间冻结 WWDG/IWDG）
+    # F1/F4 通用：DBGMCU_APB1FZ(0xE0042008) bit11=WWDG_STOP, bit12=IWDG_STOP
+    WDG_FREEZE_ADDR = 0xE0042008
+    WDG_FREEZE_BITS = (1 << 11) | (1 << 12)
+
+    def freeze_watchdogs(self) -> bool:
+        """冻结看门狗（halt 期间），防止诊断现场被 IWDG 复位清除。
+
+        真机经验（2026-08-29 F407 + MY_OTA_GUI 实测）：
+        fault 后 CPU 停止喂狗，IWDG 在"fault → 诊断 halt"的运行窗口内
+        复位芯片 → CFSR 被清零 + OpenOCD 状态失步（targets 卡 reset，
+        之后 halt 永远超时）。诊断前必须先冻结。
+        """
+        cur = self.read_memory(self.WDG_FREEZE_ADDR, size=4)
+        if cur is None:
+            return False
+        if cur & self.WDG_FREEZE_BITS == self.WDG_FREEZE_BITS:
+            return True  # 已冻结
+        return self.write_memory(self.WDG_FREEZE_ADDR,
+                                 cur | self.WDG_FREEZE_BITS, width=32)
+
     def read_fault(self) -> dict[str, Optional[int]]:
         return {
             "cfsr": self.read_memory(SCB_CFSR, size=4),
@@ -328,14 +440,17 @@ class DebugSession:
         }
 
     def read_chip_id(self) -> dict:
-        """芯片探测（自动 halt 以确保可读）"""
-        # running 态读寄存器会失败，先 halt（真机经验）
-        was_halted = False
-        try:
-            self.halt()
-            time.sleep(0.05)
-        except Exception:
-            pass
+        """芯片探测（自动 halt 以确保可读）。
+
+        真机经验（2026-08-29 F407 实测）：Flash 大小寄存器（0x1FFF7A22）
+        在未经复位的会话中读到 0x0000，必须先 reset run 再 halt 才能读出
+        正确值（F407ZGT6 = 0x0400 = 1024KB）。
+        """
+        # 先复位运行再 halt，保证系统存储区（Flash 大小/DEV_ID）可读
+        self.reset_run()
+        time.sleep(0.5)
+        self.halt()
+        time.sleep(0.05)
         cpuid = self.read_memory(CPUID_ADDR, size=4)
         dev_id_raw = self.read_memory(DBGMCU_IDCODE_ADDR, size=4)
         dev_id = (dev_id_raw & 0xFFF) if dev_id_raw is not None else None
