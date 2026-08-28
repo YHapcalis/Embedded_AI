@@ -1,0 +1,5 @@
+# harness 运行依赖
+mcp>=1.0          # MCP 服务（2.x 自动兼容）
+# 以下为可选项（对应功能未启用时可不装）
+# pyyaml>=6.0     # YAML 场景（T1.5 tester 用）
+# pyserial>=3.5   # 串口（可选）
