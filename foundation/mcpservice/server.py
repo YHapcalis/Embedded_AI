@@ -5,7 +5,7 @@ mcp/server.py — foundation MCP 服务（第 1 层：跨工具标准接口）
 任意支持 MCP 的 AI 工具（Claude Code / Trae / Cursor / CodeBuddy 等）
 一条命令即可接入并直接驱动硬件调试。
 
-对应 STANDARD_PROCESS 准备阶段②（接入 MCP 服务）。
+对应 标准流程12步 准备阶段②（接入 MCP 服务）。
 
 用法:
     # 直接启动 (stdio)

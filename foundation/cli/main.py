@@ -2,7 +2,7 @@
 cli/main.py — foundation CLI 统一入口
 
 封装嵌入式 AI 工作流的全部命令，供人类或 AI 调用。
-对应 STANDARD_PROCESS 准备阶段①（确认芯片 + 环境检查）。
+对应 标准流程12步 准备阶段①（确认芯片 + 环境检查）。
 
 用法:
     python -m foundation env check          # 环境自检
@@ -11,7 +11,7 @@ cli/main.py — foundation CLI 统一入口
     python -m foundation --help             # 全部命令
 
 设计原则:
-    - 每个子命令 = 流程中的一步（映射 STANDARD_PROCESS）
+    - 每个子命令 = 流程中的一步（映射 标准流程12步）
     - 输出人类可读 + 结构化（JSON 可选，供 AI 解析）
     - 失败不假装成功（诚实原则）
 """
@@ -118,7 +118,7 @@ def _guess_transport(arch: str) -> str:
 
 
 def _map_environment(chip: dict) -> dict:
-    """芯片类型 → 所需开发环境映射（对应 STANDARD_PROCESS ① 映射表）"""
+    """芯片类型 → 所需开发环境映射（对应 标准流程12步 ① 映射表）"""
     arch = (chip.get("arch") or "").lower()
     mcu = (chip.get("mcu") or "").lower()
 

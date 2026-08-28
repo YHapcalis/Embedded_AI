@@ -26,5 +26,8 @@ dist/
 .DS_Store
 Thumbs.db
 
+# WorkBuddy 工作区数据（会话日志/记忆，不进仓库）
+.workbuddy/
+
 # OpenOCD 临时
 *.cfg.bak

@@ -32,4 +32,4 @@ templates/boards/stm32f407/
 python -m foundation.core.vscode_gen <mcu> --project 新项目/
 ```
 
-> 详细用法见 `STANDARD_PROCESS.md` 与 `实现计划.md`
+> 详细用法见 `标准流程12步.md` 与 `docs/设计决策与约束.md`
