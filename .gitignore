@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 运行时产物
+.harness_memory/
+traces/
+*.log
+*.jsonl
+
+# 构建产物
+build/
+dist/
+*.elf
+*.bin
+*.hex
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# OpenOCD 临时
+*.cfg.bak
