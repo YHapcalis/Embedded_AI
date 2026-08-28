@@ -1,0 +1,19 @@
+{
+  "mcu": "stm32f407",
+  "board": "MY_OTA_GUI 智能仪表盘",
+  "arch": "cortex_m4",
+  "toolchain": "arm-none-eabi-gcc",
+  "transport": "swd",
+  "openocd": "st",
+  "openocd_cfg": "E:/ST/STM32/MY_workspace/Projects_F407/MY_OTA_GUI/openocd.cfg",
+  "project_dir": "E:/ST/STM32/MY_workspace/Projects_F407/MY_OTA_GUI",
+  "build_dir": "build/Debug",
+  "elf": "build/Debug/MY_OTA_GUI.elf",
+  "flash_sections": [
+    {"file": "build/Debug/bootloader.elf", "addr": "0x08000000"},
+    {"file": "build/Debug/MY_OTA_GUI.elf", "addr": "0x08010000"},
+    {"file": "build/Debug/signature.bin",  "addr": "0x080DFF80"},
+    {"file": "param_init.bin",             "addr": "0x080E0000"}
+  ],
+  "notes": "双区 OTA: BL 64KB + APP 832KB；烧录 4 段全部 verify"
+}

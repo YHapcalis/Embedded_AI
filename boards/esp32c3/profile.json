@@ -1,0 +1,14 @@
+{
+  "mcu": "esp32c3",
+  "board": "ESP32-C3 DevKit（RISC-V）",
+  "arch": "riscv",
+  "toolchain": "riscv32-esp-elf-gcc",
+  "transport": "jtag",
+  "openocd": "esp32",
+  "openocd_cfg": "board/esp32c3-builtin.cfg",
+  "project_dir": "",
+  "build_dir": "build",
+  "elf": "build/xxx.elf",
+  "flash_sections": [],
+  "notes": "Espressif 分支调试；板载 USB-JTAG 无需外部调试器"
+}
