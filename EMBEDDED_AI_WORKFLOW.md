@@ -1,32 +1,37 @@
 # EMBEDDED_AI_WORKFLOW.md — 嵌入式 AI 开发工作流 · 自引导蓝图
 
 > **本文件是一份"自引导蓝图"（Self-Bootstrapping Blueprint）**
-> 用法：将此文件直接交给任意 AI 编程工具（Claude Code / Trae / Cursor / CodeBuddy / WorkBuddy 等），
-> AI 应能独立解读本文件并开始搭建完整的嵌入式 AI 开发工作流，无需额外对话上下文。
+> 用法：将此文件连同整个工作流包（foundation/ + skills/ + 模板）交给任意 AI 编程工具，
+> AI 应能独立解读并**继续完善/使用**这套嵌入式 AI 开发工作流，无需额外对话上下文。
 >
-> 版本：v1.0 ｜ 创建：2026-08-28 ｜ 作者：Ryumeido Mei（余豪）
+> 版本：v2.0 ｜ 更新：2026-08-28 ｜ 作者：Ryumeido Mei（余豪）
+> v2.0 变更：对齐当前实现（foundation 目录 / 12 步流程 / 技能包 / 团队编排）
 
 ---
 
 ## 0. 给 AI 的第一指令（请先读这段）
 
-你是嵌入式 AI 开发工作流的**搭建者**。本文件描述了要搭建的完整系统。
+你是嵌入式 AI 开发工作流的**使用者/维护者**。这套工作流已经搭建完成（v2.0），
+你的任务是理解它、按流程使用它、并在必要时完善它。
 
-**你的任务**：严格按照本文件的「四、系统规格」和「五、实施步骤」，
-在当前工作区搭建一套可运行的嵌入式 AI 开发工作流。
+**你的任务**：
+1. 通读本文件 + `STANDARD_PROCESS.md`（12 步流程，执行的唯一依据）
+2. 查看 `实现计划.md` 了解目标与任务状态
+3. 使用 `foundation/` 的 CLI 和 MCP 服务操作开发板
+4. 按 `skills/` 技能包执行硬件诊断
+5. 如需新建项目，用 `foundation/templates/` 生成骨架
 
 **执行原则**：
-1. 先完整读本文件，再动手；不要跳过任何章节。
-2. 每完成一个阶段，验证验收标准通过后再进入下一阶段。
-3. 所有产物写入当前工作区，遵循「三、目录结构」。
-4. 遇到环境差异（Windows/Linux/macOS、不同调试器），按「六、跨环境适配」自动处理。
-5. 用户（开发者）是唯一决策者：涉及硬件操作、烧录、真实板卡时，先向用户确认。
+1. 涉及硬件操作/烧录/真实板卡时，先向用户确认
+2. 每个任务完成前，先读项目的 `PROJECT_CONTEXT.md`（若有）
+3. 任务完成后，按 `delivery-report.md` 模板交付，并更新上下文文档
+4. 诚实原则：工具不可用如实报告，不假装成功
 
 ---
 
 ## 一、项目愿景
 
-让嵌入式开发（STM32/ARM MCU 为主）具备 **AI 全自动闭环能力**：
+让嵌入式开发（STM32/ARM MCU 为主，可扩展 RISC-V/ESP32）具备 **AI 全自动闭环能力**：
 
 ```
 需求 → 架构 → 骨架 → 编码 → 编译烧录 → 运行验证 → 诊断修复 → 交付
@@ -38,203 +43,150 @@
 
 ---
 
-## 二、核心方法论（三层结构）
+## 二、标准流程（12 步，详见 STANDARD_PROCESS.md）
 
 ```
-┌─────────────────────────────────────────────┐
-│ 接入层：任意 AI 编程工具                       │
-│ Claude Code ｜ Trae ｜ Cursor ｜ CodeBuddy ... │
-└──────────┬──────────────┬──────────────────┘
-           │ MCP 接入      │ 技能包加载
-┌──────────▼────────┐  ┌──▼───────────────┐
-│ 第1层 MCP 服务     │  │ 第3层 技能包知识   │
-│ 标准工具接口       │  │ AI 诊断知识库     │
-└──────────┬────────┘  └──┬───────────────┘
-┌──────────▼──────────────▼───────────────┐
-│ 第2层 标准脚本（唯一真逻辑，跨平台）        │
-│ harness CLI：build/flash/test/diagnose    │
-└─────────────────────────────────────────┘
-```
+准备（AI 独立）：
+  ① 确认目标芯片 + 环境检查（验收门）
+  ② 技能包 + MCP + 编码规范
+  ③ 项目上下文 + 原理图
+  ④ 拉起 AI 团队（主理人 + 专业成员）
+规划（人类敲定）：
+  ⑤ 理解需求
+  ⑥ 风险与约束识别
+  ⑦ 目标定义 + 验收标准（★人敲定）
+  ⑧ 任务拆解（映射验收标准）
+执行（AI 团队 + 人类兜底）：
+  ⑨ 团队干活（主理人管理）
+  ⑩ 自主验收（断言可量化 + 终止条件）
+交付：
+  ⑪ 交付文档
+  ⑫ 更新交接文档（闭环回③）
 
-- **第 2 层（标准脚本）**：唯一的业务逻辑，Python 实现，跨平台。
-- **第 1 层（MCP 服务）**：把第 2 层能力暴露为标准工具，任意 AI 工具可接入。
-- **第 3 层（技能包）**：把"老工程师的排查经验"写成 Markdown，指导 AI 诊断。
+安全横切面（贯穿全程）：
+  S1 文件白名单 ｜ S2 硬件操作上限(15次) ｜ S3 HardFault 检测 ｜ S4 诚实原则
+```
 
 ---
 
-## 三、目录结构（目标形态）
+## 三、目录结构（当前实现）
 
 ```
-<workflow_root>/                  ← 当前工作区
-├── EMBEDDED_AI_WORKFLOW.md       ← 本文件（蓝图）
-├── STANDARD_PROCESS.md           ← 标准流程（8 步，AI 执行依据）
-├── harness/                      ← 第 2 层：标准脚本（核心）
-│   ├── harness_cli.py            ← 统一 CLI 入口
+<workflow_root>/                     ← 工作流包根目录
+├── STANDARD_PROCESS.md              ← 12 步流程（执行依据）✅
+├── 实现计划.md                      ← 目标 + 任务拆解 + 状态 ✅
+├── EMBEDDED_AI_WORKFLOW.md          ← 本文件（蓝图）
+├── foundation/                      ← 引擎（"工作流地基"）
+│   ├── __main__.py                  ← python -m foundation
+│   ├── cli/main.py                  ← CLI 入口（env/openocd/chip-confirm）
+│   ├── mcpservice/server.py         ← MCP 服务（8 工具，AI 工具接入）
 │   ├── core/
-│   │   ├── env_probe.py          ← 环境探测（openocd/gcc/stlink）
-│   │   ├── config.py             ← 配置管理（.harness/config.json）
-│   │   ├── builder.py            ← 编译封装
-│   │   ├── flasher.py            ← 烧录封装（4 段 verify）
-│   │   ├── tester.py             ← 测试场景执行
-│   │   ├── diagnostics.py        ← 诊断引擎（HardFault/挂死/内存）
-│   │   └── swd_session.py        ← SWD 调试会话（MCP 风格接口）
-│   ├── mcp_server.py             ← 第 1 层：MCP 服务
-│   ├── requirements.txt
-│   └── skills/                   ← 第 3 层：技能包
-│       ├── SKILL.md              ← 总入口：问题→路由
-│       ├── probe-workflow.md     ← 芯片探测流程
-│       ├── diagnosis-hardfault.md
-│       ├── diagnosis-hang.md
-│       ├── diagnosis-memory.md
-│       ├── diagnosis-peripheral.md
-│       ├── chip-reference.md     ← 芯片 ID 速查
-│       ├── register-decode.md
-│       └── svd/                  ← SVD 芯片描述（按厂商分目录）
-├── templates/                    ← 新工程模板（harness init 用）
-│   └── boards/
-│       ├── stm32f407/            ← 板级支持包模板
-│       └── stm32f103/
-└── .harness/
-    └── config.json               ← 本地配置（工具链路径/默认板卡）
+│   │   ├── env_probe.py             ← 环境探测（跨平台）
+│   │   ├── openocd_registry.py      ← OpenOCD 多分支管理
+│   │   ├── team_orchestrator.py     ← AI 团队编排（主理人+成员）
+│   │   └── （待建）session.py / diagnostics.py / flasher.py / tester.py
+│   └── templates/
+│       ├── project-context.md       ← 项目上下文模板（③⑫闭环）
+│       ├── coding-standard.md       ← 编码规范模板
+│       └── delivery-report.md       ← 交付文档模板（⑪）
+├── skills/                          ← 技能包知识库（内置分发）
+│   ├── SKILL.md                     ← 路由入口
+│   ├── diagnosis-*.md               ← 诊断技能（hardfault/hang/memory/peripheral/clock）
+│   ├── probe-workflow.md            ← 芯片探测
+│   ├── register-decode.md           ← 寄存器解读
+│   ├── elf-workflow.md              ← ELF 源码定位
+│   ├── chip-reference.md            ← 芯片 ID 速查
+│   └── svd/                         ← SVD 描述文件（arm/STM32F407xx.svd）
+└── .gitignore
 ```
 
 ---
 
-## 四、系统规格
+## 四、核心能力
 
-### 4.1 harness CLI（第 2 层核心）
+### 4.1 CLI（foundation）
 
 ```
-harness env check                # 环境自检：openocd/gcc/stlink/python 版本
-harness init <project>           # 从 templates/ 复制新工程骨架
-harness build <board>            # 编译（cmake/make 封装）
-harness flash <board>            # 烧录（openocd 4 段 verify：BL+APP+签名+参数）
-harness test <scenario>          # 跑测试场景（YAML 断言）
-harness diagnose <problem>       # 硬件诊断（hardfault/hang/memory）
+python -m foundation env check            # 环境自检（openocd/gcc/stlink/python/git）
+python -m foundation openocd list         # OpenOCD 多分支查看（st/esp32/mainline）
+python -m foundation chip-confirm --mcu stm32f407 --arch cortex_m4   # 确认芯片+映射环境
 ```
 
-### 4.2 MCP 工具接口（第 1 层）
+### 4.2 MCP 服务（跨工具接入）
 
-| 工具名 | 功能 | 底层实现 |
-|--------|------|---------|
-| `connect()` | 建立调试会话，返回 arch/target | OpenOCD TCL |
-| `halt()` / `resume()` | CPU 暂停/恢复 | OpenOCD |
-| `memory_read()` / `write()` | 内存读写 | mdw/mww |
-| `register_read()` | 读寄存器（PC/LR/SP/xPSR） | reg |
-| `chip_identify()` | 芯片探测（CPUID+DEV_ID） | 0xE000ED00 |
-| `diagnose(problem)` | 硬件诊断 | diagnostics.py |
-| `build(board)` / `flash(board)` / `test(scenario)` | 开发链路 | harness CLI |
-
-**强制前置**：所有硬件操作必须先 `connect()`，未连接返回 `"no active session"`。
-
-### 4.3 诊断引擎（第 3 层核心，diagnostics.py）
-
-| 诊断 | 能力 |
-|------|------|
-| HardFaultDiagnosis | CFSR/HFSR/MMFAR/BFAR 位域解码 + 8 字栈帧回溯 + ELF 源码映射 |
-| HangDiagnosis | 5 次 PC 采样判断死循环/跑飞/中断风暴 |
-| MemoryDiagnosis | SP 栈使用率 + 向量表 + FreeRTOS 堆 + canary 扫描 |
-
-### 4.4 断言引擎（tester.py）
-
-支持 8 种检查：`frequency / range / monotonic / rate / change_detected / pattern / state_machine / stable_after`，场景由 YAML 定义。
-
----
-
-## 五、实施步骤（AI 按此顺序执行）
-
-### 阶段 1：环境基线
-- [ ] 确认 Python 3.10+、OpenOCD、arm-none-eabi-gcc、Git 可用
-- [ ] `harness env check` 输出全部通过
-
-### 阶段 2：harness CLI 骨架
-- [ ] 实现 harness_cli.py（argparse，子命令：env/init/build/flash/test/diagnose）
-- [ ] 实现 env_probe.py（探测 openocd 路径、gcc、stlink 连接）
-- [ ] 实现 config.py（.harness/config.json 读写）
-- [ ] **验收**：`python harness_cli.py env check` 正常输出环境信息
-
-### 阶段 3：核心能力
-- [ ] swd_session.py：connect/halt/resume/register_read/memory_read/backtrace
-- [ ] diagnostics.py：HardFault/挂死/内存三类诊断 + 结构化报告
-- [ ] flasher.py：openocd 4 段烧录 + verify 校验
-- [ ] tester.py：YAML 场景加载 + 断言执行
-- [ ] **验收**：能对真实板卡（F407）完成 芯片探测 → 诊断 → 烧录
-
-### 阶段 4：MCP 服务
-- [ ] mcp_server.py：暴露第 4.2 节全部工具
-- [ ] **验收**：Claude Code / Trae 等一条命令注册成功，AI 可调用 connect()
-
-### 阶段 5：技能包
-- [ ] SKILL.md 路由（问题类型→诊断流程映射）
-- [ ] 3 个核心诊断技能（hardfault/hang/memory）
-- [ ] 芯片参考 + SVD 目录
-- [ ] **验收**：新 AI 读 SKILL.md 后能按流程引导诊断
-
-### 阶段 6：模板与流程
-- [ ] templates/boards/ 新工程模板（多 MCU 适配）
-- [ ] STANDARD_PROCESS.md（8 步标准流程）
-- [ ] **验收**：`harness init demo` 生成可用工程骨架
-
----
-
-## 六、跨环境 / 跨工具适配
-
-### 环境差异（Windows/Linux/macOS）
-- 工具链探测：Windows 查 STM32CubeIDE 插件目录；Linux/macOS 查 PATH 中 openocd/arm-none-eabi-gcc
-- 路径统一 `Path.as_posix()`（Windows 反斜杠会坑 OpenOCD）
-- 调试器：ST-Link/J-Link/CMSIS-DAP 通过 openocd.cfg 隔离，harness 不关心
-
-### AI 工具接入
 ```bash
-# Claude Code
-claude mcp add harness-ai -- python harness/mcp_server.py
-# Trae / Cursor 等：在 MCP 配置界面添加同一条命令
+claude mcp add foundation-ai -- python E:/嵌入式AI工作流/foundation/mcpservice/server.py
 ```
-技能包复制：`.claude/skills/` ｜ `.trae/skills/` ｜ `.cursor/rules/`
 
-### 换工具/换环境时不变的东西
-- 第 2 层脚本（唯一逻辑）
-- 项目记忆（可进 git，随仓库走）
-- 标准流程（STANDARD_PROCESS.md）
+8 个工具：`env_check / openocd_list / chip_identify / halt / resume /
+register_read / memory_read / diagnose`
+
+### 4.3 AI 团队编排（team_orchestrator.py）
+
+```python
+from core.team_orchestrator import TeamOrchestrator
+team = TeamOrchestrator()
+team.set_lead()
+team.add_member("driver", ["Core/Src/can.c"], "CAN 驱动")
+task = team.assign("实现 CAN 电量解析", "driver", acceptance=["编译通过"])
+team.collect(task.id, "完成，编译通过")
+team.review(task.id)   # 主理人审查
+```
+
+### 4.4 多 MCU 适配（OpenOCD Registry + 双协议）
+
+- OpenOCD 多分支共存：STM32 用 ST 分支，ESP32 用 Espressif 分支，通用用主线
+- 接口不变，协议（SWD/JTAG）由板卡 Profile 决定 → 换芯片只加适配文件
 
 ---
 
-## 七、标准流程（STANDARD_PROCESS.md 摘要）
+## 五、使用指南
 
-AI 开发新功能时按此 8 步执行：
+### 5.1 新项目流程
 
-```
-① 需求定义（人，10min）
-② 架构方案（AI 出 + 人审，30min）
-③ 工程骨架（harness init，5min）
-④ 开发（AI 编码 + 文件白名单，1-2h）
-⑤ 编译烧录（harness build + flash，2min）
-⑥ 运行验证（harness test 断言，按场景）
-⑦ 判定+诊断（通过→交付；失败→harness diagnose→AI 修→回⑤）
-⑧ 交付输出（固件+文档+测试报告+记忆沉淀）
-```
+1. 复制 `foundation/templates/project-context.md` 为 `PROJECT_CONTEXT.md` 并填写
+2. 按 STANDARD_PROCESS ② 复制 coding-standard.md 为 `CODING_STANDARD.md`
+3. 确认目标芯片：`python -m foundation chip-confirm`
+4. 环境检查：`python -m foundation env check`
+5. 按 12 步流程执行开发
+
+### 5.2 接入新 AI 工具
+
+1. 注册 MCP（见 4.2）
+2. 把 `skills/SKILL.md` 复制到工具的 skills 目录
+3. 告诉 AI "按 STANDARD_PROCESS.md 执行"
+
+### 5.3 换 MCU（新增板卡）
+
+1. 新增 `boards/<name>/profile.json`（mcu/arch/toolchain/transport/openocd/flash_sections）
+2. 提供对应 openocd.cfg
+3. 引擎零改动（S9 验收项）
 
 ---
 
-## 八、安全规则（AI 必须遵守）
+## 六、安全规则（AI 必须遵守）
 
-1. **硬件操作安全阀**：烧录/复位/写寄存器前先确认，操作次数设上限（默认 15 次/会话）
-2. **文件白名单**：AI 只能修改场景 YAML 允许的文件，禁止改启动文件/链接脚本
-3. **HardFault 检测**：每次函数调用后检查，异常立即停止并诊断
+1. **硬件操作安全阀**：烧录/复位/写寄存器前先确认；操作次数上限 15 次/会话
+2. **文件白名单**：只能修改任务允许的文件（team_orchestrator 强制）
+3. **HardFault 检测**：每次硬件操作后检查，异常立即停止并诊断
 4. **诚实原则**：工具不可用时如实报告，不假装执行成功
+5. **协议合规**：技能包改编自 AixProbe（CC BY-NC-SA 4.0），不可商用
 
 ---
 
-## 九、验收总标准
+## 七、当前状态与待完善
 
-以下全部满足视为"工作流搭建完成"：
-- [ ] `harness env check` 通过
-- [ ] 能对真实板卡完成：连接 → 芯片探测 → 健康检查
-- [ ] 能完整烧录固件（4 段 verify 全过）
-- [ ] 能诊断真实 HardFault 并输出结构化报告
-- [ ] MCP 服务可被 AI 工具注册并调用
-- [ ] 新 AI 读本蓝图 + SKILL.md 后能独立执行标准流程
+| 组件 | 状态 |
+|------|------|
+| 12 步流程文档 | ✅ v2.0 |
+| CLI（env/openocd/chip-confirm） | ✅ |
+| MCP 服务（8 工具） | ✅ |
+| 技能包知识库（10 文件 + SVD） | ✅ |
+| 团队编排 | ✅ |
+| 模板（上下文/编码规范/交付） | ✅ |
+| 调试会话/诊断引擎/烧录/断言 | ⬜ 待建（Phase 1） |
+| 全量验收 S1-S10 | ⬜ 待建（Phase 6） |
 
 ---
 
-*本蓝图随项目演进持续更新。任何 AI 搭建完成后，应在 STANDARD_PROCESS.md 中记录实际偏差与改进。*
+*本蓝图随项目演进持续更新。任何变更须同步修订 STANDARD_PROCESS.md 与实现计划.md。*
