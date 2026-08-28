@@ -62,13 +62,12 @@ class _DebugSession:
         """延迟创建 OpenOCD 客户端（避免 import 循环）"""
         if self.ocd is None:
             try:
-                from core.swd_session import SWDDebugSession
-                from core.openocd_proc import OpenOCDProcess
+                from core.session import DebugSession, OpenOCDProcess
                 # 启动 OpenOCD（如果未运行）并连接
                 proc = OpenOCDProcess()
                 if not proc.is_running():
                     proc.start()
-                self.ocd = SWDDebugSession()
+                self.ocd = DebugSession()
             except ImportError:
                 # 回退：直接 TCL 连接
                 from core.tcl_client import TCLClient
