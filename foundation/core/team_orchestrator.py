@@ -179,27 +179,50 @@ class TeamOrchestrator:
         return task
 
     def collect(self, task_id: str, output: str) -> bool:
-        """收集成员产出"""
+        """收集成员产出（被打回的任务可重新提交）"""
         task = self.tasks.get(task_id)
         if not task:
             return False
         task.output = output
         task.status = TaskStatus.DONE
-        print(f"[团队] 任务 {task_id} 产出已收集（待主理人审查）")
+        tag = "（重新提交）" if task.output else ""
+        print(f"[团队] 任务 {task_id} 产出已收集{tag}（待主理人审查）")
         return True
 
     def review(self, task_id: str,
-               check_fn: Callable[[Task], ReviewVerdict] = None
-               ) -> ReviewVerdict:
+               check_fn: Callable[[Task], ReviewVerdict] = None,
+               files: dict = None) -> ReviewVerdict:
         """
         主理人审查任务产出。
         check_fn: 自定义审查函数（返回 APPROVE/REJECT/ESCALATE），
                   缺省用默认规则（有产出 + 有验收项即通过）。
+        files: {文件路径: 源码内容} — 提供时自动执行宪法审查
+               （embedded-engineering-rules：四层架构/ISR/内存/时序/CubeMX）
         """
         task = self.tasks.get(task_id)
         if not task or task.status != TaskStatus.DONE:
             print(f"[审查] 任务 {task_id} 无产出可审")
             return ReviewVerdict.ESCALATE
+
+        # ★ 宪法审查（如果提供了文件）
+        if files:
+            try:
+                from core.constitution_guard import ConstitutionGuard, Severity
+                guard = ConstitutionGuard()
+                critical = []
+                for fpath, src in files.items():
+                    r = guard.review_file(fpath, src)
+                    for v in r.violations:
+                        if v.severity == Severity.CRITICAL:
+                            critical.append(f"  {fpath}: {v}")
+                if critical:
+                    task.status = TaskStatus.REJECTED
+                    print(f"[审查] 任务 {task_id} ❌ 违反工程宪法（{len(critical)} 处违宪）：")
+                    for c in critical[:5]:
+                        print(c)
+                    return ReviewVerdict.REJECT
+            except ImportError:
+                pass  # 宪法审查器不可用时退回默认规则
 
         if check_fn:
             verdict = check_fn(task)
