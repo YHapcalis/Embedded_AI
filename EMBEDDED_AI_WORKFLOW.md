@@ -35,13 +35,18 @@
 |------|-----------|------|
 | 启动/了解全貌 | **本文件**（你正在读的） | ~300 tokens |
 | 开始执行开发流程 | `STANDARD_PROCESS.md`（12 步流程） | ~1.7K |
+| **进入嵌入式工程/写代码前** | **`foundation/templates/embedded-engineering-rules.md`（工程宪法）** | ~2K |
 | 诊断问题 | `skills/SKILL.md`（路由）→ 命中后只读对应 `diagnosis-*.md` | ~660 + 单个 |
 | 查芯片型号 | `skills/chip-reference.md`（用 Grep 按型号搜） | 按需行 |
 | 查寄存器定义 | `skills/svd/`（**用 Grep 搜外设名，绝不整读**） | 按需行 |
 | 新项目骨架 | `templates/boards/stm32f407/` | ~1K |
 | 交付文档 | `foundation/templates/delivery-report.md` | ~400 |
-| 编码规范 | `foundation/templates/coding-standard.md` | ~400 |
+| 编码规范补充 | `foundation/templates/coding-standard.md`（rules 的补充，命名/commit 用） | ~300 |
 | 项目上下文 | `PROJECT_CONTEXT.md`（若有） | 项目相关 |
+
+> **⚠️ 约束层铁律**：进入嵌入式工程后、写任何代码前，
+> **必须先读 `embedded-engineering-rules.md`**（四层架构/六模式/ISR/内存/CubeMX 边界）。
+> 它比 coding-standard 优先级更高——冲突时以它为准。
 
 ### SVD 文件的铁律（519K tokens 的炸弹）
 
