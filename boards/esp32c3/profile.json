@@ -10,5 +10,16 @@
   "build_dir": "build",
   "elf": "build/xxx.elf",
   "flash_sections": [],
-  "notes": "Espressif 分支调试；板载 USB-JTAG 无需外部调试器"
+  "notes": "Espressif 分支调试；板载 USB-JTAG 无需外部调试器",
+  "memory": {
+    "flash": [
+      0,
+      4194304
+    ],
+    "sram": [
+      1070071808,
+      1070596096
+    ],
+    "fault_regs": {}
+  }
 }

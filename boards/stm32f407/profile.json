@@ -10,10 +10,36 @@
   "build_dir": "build/Debug",
   "elf": "build/Debug/MY_OTA_GUI.elf",
   "flash_sections": [
-    {"file": "build/Debug/bootloader.elf"},
-    {"file": "build/Debug/MY_OTA_GUI.elf"},
-    {"file": "build/Debug/signature.bin",  "addr": "0x080DFF80"},
-    {"file": "param_init.bin",             "addr": "0x080E0000"}
+    {
+      "file": "build/Debug/bootloader.elf"
+    },
+    {
+      "file": "build/Debug/MY_OTA_GUI.elf"
+    },
+    {
+      "file": "build/Debug/signature.bin",
+      "addr": "0x080DFF80"
+    },
+    {
+      "file": "param_init.bin",
+      "addr": "0x080E0000"
+    }
   ],
-  "notes": "双区 OTA: BL 64KB + APP 832KB；烧录 4 段全部 verify"
+  "notes": "双区 OTA: BL 64KB + APP 832KB；烧录 4 段全部 verify",
+  "memory": {
+    "flash": [
+      134217728,
+      135266304
+    ],
+    "sram": [
+      536870912,
+      537067520
+    ],
+    "fault_regs": {
+      "cfsr": "0xE000ED28",
+      "hfsr": "0xE000ED2C",
+      "mmfar": "0xE000ED38",
+      "bfar": "0xE000ED3C"
+    }
+  }
 }
