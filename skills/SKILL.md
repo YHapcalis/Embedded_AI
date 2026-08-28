@@ -12,6 +12,16 @@ argument-hint: "[problem-type] [chip-family]"
 > 方法论改编自 AixProbe 开源项目（CC BY-NC-SA 4.0，非商用）。
 > 工具接口对齐 foundation 的 SWDDebugSession。
 
+## ⚠️ 渐进式披露（Token 经济性）
+
+**本文件是路由入口（~660 tokens），不是全部知识。**
+
+- ❌ 禁止同时读入所有 `diagnosis-*.md`（合计 ~5K tokens，多数用不到）
+- ✅ 只读**被路由到的那个**诊断技能文件
+- ❌ 禁止整读 `svd/` 下的 .svd 文件（519K tokens！）
+- ✅ 查寄存器用 Grep：`Grep("RCC_CR", glob="*.svd")` 只取匹配行
+- ✅ 查芯片用 Grep 搜 chip-reference.md 对应行
+
 ## ⚠️ 前置要求：必须先 connect
 
 **所有硬件操作（读寄存器、读内存、halt、诊断等）都依赖一个活动的调试会话。**

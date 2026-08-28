@@ -1,5 +1,7 @@
 # 内存问题诊断
 
+> ⚠️ 渐进式披露：仅在 SKILL.md 路由到本技能时读取（按需单读）。
+
 > 来源：改编自 AixProbe 技能包（CC BY-NC-SA 4.0，非商用）
 > 适配：foundation 工具接口（MCP 风格）
 
