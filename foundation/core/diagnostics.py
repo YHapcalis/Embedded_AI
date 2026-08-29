@@ -19,6 +19,7 @@ diagnostics.py — AI 硬件诊断引擎（架构无关）
 """
 
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -32,6 +33,39 @@ try:
     from core.session import DebugSession
 except ImportError:
     from session import DebugSession
+
+
+# ─── 工具链定位（PATH 兜底扫描，防静默降级）─────────────────
+
+def _find_toolchain_bin(prefix: str = "arm-none-eabi-") -> Optional[str]:
+    """定位交叉工具链 bin 目录。
+
+    真机经验（2026-08-29）：系统默认 PATH 里没有 arm-none-eabi-*，
+    旧版 ELFTools 直接退化为"纯地址输出"（源码定位静默失效）。
+    现在按优先级兜底：
+      1. PATH 中的 {prefix}addr2line
+      2. STM32CubeIDE 插件 gnu-tools 目录（Windows）
+      3. 常见安装位置（Linux/macOS）
+    """
+    exe = shutil.which(prefix + "addr2line")
+    if exe:
+        return str(Path(exe).parent)
+    if sys.platform == "win32":
+        roots = [
+            Path("E:/ST/STM32/STM32CubeIDE/plugins"),
+            Path("C:/ST/STM32CubeIDE/plugins"),
+            Path.home() / "STM32CubeIDE" / "plugins",
+        ]
+        for root in roots:
+            if not root.exists():
+                continue
+            for p in root.glob("*gnu-tools*/tools/bin/" + prefix + "addr2line.exe"):
+                return str(p.parent)
+    else:
+        for d in ("/usr/bin", "/usr/local/bin", "/opt/arm-none-eabi/bin"):
+            if (Path(d) / (prefix + "addr2line")).exists():
+                return d
+    return None
 
 
 # ─── 知识表（与诊断逻辑分离）────────────────────────────────
@@ -103,12 +137,20 @@ class ELFTools:
     def __init__(self, elf_path: str = "", tool_prefix: str = "arm-none-eabi-"):
         self.elf_path = Path(elf_path) if elf_path else None
         self.prefix = tool_prefix
+        # 工具链兜底定位（PATH 无 arm-none-eabi-* 时也能用 CubeIDE 内置）
+        self._bin = _find_toolchain_bin(tool_prefix)
+
+    def _tool(self, name: str) -> str:
+        """返回工具完整路径（兜底目录存在则用绝对路径）"""
+        if self._bin:
+            return str(Path(self._bin) / f"{self.prefix}{name}")
+        return f"{self.prefix}{name}"
 
     def is_available(self) -> bool:
         if not self.elf_path or not self.elf_path.exists():
             return False
         try:
-            r = subprocess.run([f"{self.prefix}nm", "--version"],
+            r = subprocess.run([self._tool("nm"), "--version"],
                                capture_output=True, timeout=5)
             return r.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -119,7 +161,7 @@ class ELFTools:
             return hex(address)
         try:
             r = subprocess.run(
-                [f"{self.prefix}addr2line", "-e", str(self.elf_path),
+                [self._tool("addr2line"), "-e", str(self.elf_path),
                  "-f", "-C", f"0x{address:X}"],
                 capture_output=True, text=True, timeout=10)
             lines = r.stdout.strip().splitlines()
