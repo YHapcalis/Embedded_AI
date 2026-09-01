@@ -31,9 +31,9 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from .env_probe import detect_platform
+    from .env_probe import cubeide_plugins_roots, detect_platform
 except ImportError:
-    from env_probe import detect_platform
+    from env_probe import cubeide_plugins_roots, detect_platform
 
 
 # ─── 数据结构 ─────────────────────────────────────────────────
@@ -93,12 +93,7 @@ class OpenOCDRegistry:
 
     def _scan_windows(self):
         # 1. STM32CubeIDE 插件目录（ST 分支）
-        cubeide_roots = [
-            Path("E:/ST/STM32/STM32CubeIDE/plugins"),
-            Path("C:/ST/STM32CubeIDE/plugins"),
-            Path.home() / "STM32CubeIDE" / "plugins",
-        ]
-        for root in cubeide_roots:
+        for root in cubeide_plugins_roots():
             if not root.exists():
                 continue
             for p in root.glob("*openocd*/tools/bin/openocd.exe"):

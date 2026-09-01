@@ -24,7 +24,7 @@ from pathlib import Path
 # 允许直接运行脚本时也能找到 core 包
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.env_probe import EnvironmentProbe
+from core.env_probe import EnvironmentProbe, ProbeResult
 from core.openocd_registry import OpenOCDRegistry
 
 
@@ -34,6 +34,11 @@ def cmd_env_check(args):
     """环境自检（对应流程①第 2-4 步）"""
     probe = EnvironmentProbe()
     results = probe.check_all()
+    if args.no_hardware:
+        # 无开发板环境搭建：跳过 stlink 判定，工具链为准（如实标注，不假装成功）
+        results["stlink"] = ProbeResult(
+            name="stlink", found=True,
+            details="已跳过（--no-hardware：未连接开发板）")
 
     if args.json:
         out = {name: {"found": r.found, "version": r.version,
@@ -42,7 +47,7 @@ def cmd_env_check(args):
         print(json.dumps(out, ensure_ascii=False, indent=2))
         return 0 if all(r.found for r in results.values()) else 1
 
-    print(probe.summary_text())
+    print(probe.summary_text(results))
     ok = all(r.found for r in results.values())
     print("")
     print("=== 结论 ===")
@@ -122,18 +127,19 @@ def _map_environment(chip: dict) -> dict:
     arch = (chip.get("arch") or "").lower()
     mcu = (chip.get("mcu") or "").lower()
 
-    if "esp32" in mcu and "c" not in mcu and "h" not in mcu and "p" not in mcu:
-        # ESP32/S2/S3 → Xtensa
+    if "esp32" in mcu:
+        # ESP32 家族: 基础/S 系列 = Xtensa; C/H/P 变体 = RISC-V
+        # （注意: 不能查 'p' not in mcu —— "esp32" 本身含字母 p，旧判断永远不命中）
+        variant = mcu.split("esp32", 1)[1]
+        if variant and variant[0] in ("c", "h", "p"):
+            return {
+                "openocd_branch": "esp32 (Espressif 分支)",
+                "compiler": "riscv32-esp-elf-gcc",
+                "protocol": "jtag",
+            }
         return {
             "openocd_branch": "esp32 (Espressif 分支)",
             "compiler": "xtensa-esp32-elf-gcc",
-            "protocol": "jtag",
-        }
-    if "esp32" in mcu or "esp" in mcu:
-        # ESP32-C/H/P → RISC-V
-        return {
-            "openocd_branch": "esp32 (Espressif 分支)",
-            "compiler": "riscv32-esp-elf-gcc",
             "protocol": "jtag",
         }
     if "riscv" in arch or "rv32" in arch or "ch32v" in mcu:
@@ -170,6 +176,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_env = sub.add_parser("env", help="环境检查")
     p_env.add_argument("check", nargs="?", default="check", help="子操作: check")
     p_env.add_argument("--json", action="store_true", help="JSON 输出")
+    p_env.add_argument("--no-hardware", action="store_true",
+                       help="跳过调试器/板卡探测（未连接开发板时用）")
     p_env.set_defaults(func=cmd_env_check)
 
     # openocd list
@@ -190,6 +198,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None):
+    # 中文 Windows 控制台默认 GBK 编码：强制 stdout/stderr UTF-8，
+    # 避免 ✅/⚠️ 等符号触发 'gbk' codec 崩溃（2026-09-01 真机环境发现）
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = build_parser()
     args = parser.parse_args(argv)
 

@@ -54,6 +54,24 @@ def detect_platform() -> str:
     return "linux"
 
 
+def cubeide_plugins_roots() -> list[Path]:
+    """收集 STM32CubeIDE 插件目录候选路径。
+
+    覆盖: E:/ST 与 C:/ST 默认安装、用户目录，以及 D 盘自定义安装
+    （D:/STM32CubeIDE/<版本>/STM32CubeIDE/plugins，版本号用 glob 兜底，
+    避免 CubeIDE 升级后路径失效）。openocd_registry 复用本函数。
+    """
+    roots = [
+        Path("E:/ST/STM32/STM32CubeIDE/plugins"),
+        Path("C:/ST/STM32CubeIDE/plugins"),
+        Path.home() / "STM32CubeIDE" / "plugins",
+    ]
+    d_root = Path("D:/STM32CubeIDE")
+    if d_root.exists():
+        roots += list(d_root.glob("*/STM32CubeIDE/plugins"))
+    return roots
+
+
 # ─── 环境探测主类 ─────────────────────────────────────────────
 
 class EnvironmentProbe:
@@ -83,16 +101,9 @@ class EnvironmentProbe:
 
         if self.platform == "windows":
             # 1. STM32CubeIDE 插件目录（版本号目录用 glob）
-            cubeide_roots = [
-                Path("E:/ST/STM32/STM32CubeIDE/plugins"),
-                Path("C:/ST/STM32CubeIDE/plugins"),
-                Path.home() / "STM32CubeIDE" / "plugins",
-            ]
-            for root in cubeide_roots:
+            for root in cubeide_plugins_roots():
                 if not root.exists():
                     continue
-                for p in root.glob("*openocd*/tools/bin/openocd.exe"):
-                    candidates.append((p, "st-branch"))
                 for p in root.glob("*openocd*/tools/bin/openocd.exe"):
                     candidates.append((p, "st-branch"))
         else:
@@ -136,15 +147,26 @@ class EnvironmentProbe:
         exe = shutil.which(prefix)
         if not exe and self.platform == "windows":
             # STM32CubeIDE 内置工具链
-            roots = [
-                Path("E:/ST/STM32/STM32CubeIDE/plugins"),
-                Path("C:/ST/STM32CubeIDE/plugins"),
-            ]
+            roots = cubeide_plugins_roots()
             for root in roots:
                 if root.exists():
                     for p in root.glob("*gnu-tools*/tools/bin/" + prefix + ".exe"):
                         exe = str(p)
                         break
+                if exe:
+                    break
+        if not exe and self.platform == "windows":
+            # Espressif 工具链（ESP-IDF 安装布局: tools/<名>/<版本>/<名>/bin/）
+            esp_roots = [
+                Path("C:/Espressif/tools"),
+                Path.home() / ".espressif" / "tools",
+            ]
+            for root in esp_roots:
+                if not root.exists():
+                    continue
+                for p in root.glob("*/**/bin/" + prefix + ".exe"):
+                    exe = str(p)
+                    break
                 if exe:
                     break
         if not exe:
@@ -295,9 +317,14 @@ class EnvironmentProbe:
         self._cache = results
         return results
 
-    def summary_text(self) -> str:
-        """人类可读的探测结果摘要（harness env check 输出用）"""
-        results = self.check_all()
+    def summary_text(self, results: Optional[dict] = None) -> str:
+        """人类可读的探测结果摘要（harness env check 输出用）
+
+        results 可传入预计算结果（如 --no-hardware 替换 stlink 后），
+        避免重复探测导致调用方的修改被丢弃。
+        """
+        if results is None:
+            results = self.check_all()
         lines = ["=== 环境探测结果 ===", ""]
         for name, r in results.items():
             if r.found:
