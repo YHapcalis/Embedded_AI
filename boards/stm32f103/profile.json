@@ -1,0 +1,35 @@
+{
+  "mcu": "stm32f103c8t6",
+  "board": "STM32F103C8T6 最小系统板（Blue Pill）",
+  "arch": "cortex_m3",
+  "toolchain": "arm-none-eabi-gcc",
+  "transport": "swd",
+  "openocd": "st",
+  "openocd_cfg": "openocd.cfg",
+  "project_dir": "C:/Users/Microsoft/Desktop/嵌入式AI工作流/projects/stm32f103c8t6_blink",
+  "build_dir": "build/Debug",
+  "elf": "build/Debug/stm32f103c8t6_blink.elf",
+  "flash_sections": [
+    {
+      "file": "build/Debug/stm32f103c8t6_blink.elf",
+      "addr": "0x08000000"
+    }
+  ],
+  "notes": "64KB Flash / 20KB SRAM / Cortex-M3 无 FPU；工程将在流程⑨创建（project_dir 为占位路径）",
+  "memory": {
+    "flash": [
+      134217728,
+      134283264
+    ],
+    "sram": [
+      536870912,
+      536891392
+    ],
+    "fault_regs": {
+      "cfsr": "0xE000ED28",
+      "hfsr": "0xE000ED2C",
+      "mmfar": "0xE000ED34",
+      "bfar": "0xE000ED38"
+    }
+  }
+}
