@@ -1,0 +1,35 @@
+{
+  "mcu": "cks32f105ret6",
+  "board": "CKS32F105RET6 开发板（中科芯，STM32F105RET6 互联型寄存器级兼容）",
+  "arch": "cortex_m3",
+  "toolchain": "arm-none-eabi-gcc",
+  "transport": "swd",
+  "openocd": "st",
+  "openocd_cfg": "openocd.cfg",
+  "project_dir": "C:/Users/Microsoft/Desktop/嵌入式AI工作流/projects/cks32f105ret6_blink",
+  "build_dir": "build/Debug",
+  "elf": "build/Debug/cks32f105ret6_blink.elf",
+  "flash_sections": [
+    {
+      "file": "build/Debug/cks32f105ret6_blink.elf",
+      "addr": "0x08000000"
+    }
+  ],
+  "notes": "CKS 国产替代（互联型：双 CAN + USB OTG，主频 72MHz）。CubeMX 选 STM32F105RE 生成。踩坑必读 skills/cks-pitfalls.md；F105 特有：CAN/USB 上板验证 + 引脚复用核对",
+  "memory": {
+    "flash": [
+      134217728,
+      134742016
+    ],
+    "sram": [
+      536870912,
+      536936448
+    ],
+    "fault_regs": {
+      "cfsr": "0xE000ED28",
+      "hfsr": "0xE000ED2C",
+      "mmfar": "0xE000ED34",
+      "bfar": "0xE000ED38"
+    }
+  }
+}

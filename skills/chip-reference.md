@@ -1,7 +1,7 @@
 # 芯片 ID 速查表
 
 > 来源：改编自 AixProbe 技能包（CC BY-NC-SA 4.0，非商用）
-> 覆盖：F407 / F103 / ESP32-C3 基础表（可扩展）
+> 覆盖：F407 / F103 / ESP32 / CKS32（国产替代）速查表（可扩展）
 
 ## ARM Cortex-M 通用
 
@@ -62,6 +62,34 @@
 | SRAM | 0x20000000-0x20030000 (192KB) | 0x20000000-0x20005000 (20KB) |
 | 外设 | 0x40000000-0x5FFFFFFF | 0x40000000-0x5FFFFFFF |
 | Cortex 系统 | 0xE0000000-0xE00FFFFF | 0xE0000000-0xE00FFFFF |
+
+---
+
+## CKS（中科芯，STM32 国产替代）
+
+> 寄存器级兼容克隆：ST 库/工具链/SVD 直接复用对应 ST 型号。
+> 踩坑点见 [cks-pitfalls.md](cks-pitfalls.md)（仅 CKS 开发/诊断时按需读取）。
+
+### 识别与 SVD
+
+| 型号 | 对应 ST | DEV_ID（IDCODE 低 12 位） | 内核 | SVD 文件 |
+| --- | --- | --- | --- | --- |
+| CKS32F103C8T6 | STM32F103C8T6（中密度） | 0x410（通常与 ST 同；个别烧录器报 ID 错误见踩坑） | Cortex-M3 | arm/STM32F103xx.svd ✅ |
+| CKS32F105RET6 | STM32F105RET6（互联型） | 0x418（通常与 ST 同） | Cortex-M3 | ⚠️ 仓库暂无 F105 SVD，寄存器以 STM32F105 手册为准 |
+
+### 内存布局（与对应 ST 完全一致）
+
+| 型号 | Flash | SRAM |
+| --- | --- | --- |
+| CKS32F103C8T6 | 64KB @ 0x08000000 | 20KB @ 0x20000000 |
+| CKS32F105RET6 | 512KB @ 0x08000000 | 64KB @ 0x20000000 |
+
+### 与 ST 的差异速查
+
+- 价格低约 30%、功耗低约 10mA；供货稳定（国产替代核心价值）
+- 🔴 `GPIO_PinRemapConfig()` 会关 SWD/JTAG 调试口；访问非法地址必 HardFault → 详见 cks-pitfalls.md
+- 开发流程零改动：CubeMX 选对应 ST 型号、arm-none-eabi-gcc + OpenOCD st 分支、ST-Link SWD
+- F105 定位提醒：双 CAN + USB OTG 互联型，与 F103 普通型定位不同
 
 ---
 

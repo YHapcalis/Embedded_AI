@@ -60,9 +60,10 @@ AI 可解读外设寄存器 / 执行诊断流程
 | 场景 | 参考文档 | 说明 |
 |------|---------|------|
 | 连接后识别芯片 | [probe-workflow.md](probe-workflow.md) | CPUID + DEV_ID 探测型号 |
-| 芯片 ID 速查 | [chip-reference.md](chip-reference.md) | F407/F103/ESP32-C3 等 ID 表 |
+| 芯片 ID 速查 | [chip-reference.md](chip-reference.md) | F407/F103/ESP32/CKS32 等 ID 表 |
 | 寄存器解读 | [register-decode.md](register-decode.md) | 配合 SVD 解析位域 |
 | ELF 源码定位 | [elf-workflow.md](elf-workflow.md) | 崩溃地址 → 源码行 |
+| CKS 国产替代踩坑 | [cks-pitfalls.md](cks-pitfalls.md) | 重映射断调试口/野地址 HardFault 等（仅 CKS 任务读） |
 
 ### 调试诊断
 

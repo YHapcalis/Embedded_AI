@@ -1,0 +1,35 @@
+{
+  "mcu": "cks32f103c8t6",
+  "board": "CKS32F103C8T6 开发板（中科芯，STM32F103C8T6 寄存器级兼容）",
+  "arch": "cortex_m3",
+  "toolchain": "arm-none-eabi-gcc",
+  "transport": "swd",
+  "openocd": "st",
+  "openocd_cfg": "openocd.cfg",
+  "project_dir": "C:/Users/Microsoft/Desktop/嵌入式AI工作流/projects/cks32f103c8t6_blink",
+  "build_dir": "build/Debug",
+  "elf": "build/Debug/cks32f103c8t6_blink.elf",
+  "flash_sections": [
+    {
+      "file": "build/Debug/cks32f103c8t6_blink.elf",
+      "addr": "0x08000000"
+    }
+  ],
+  "notes": "CKS 国产替代：工具链/寄存器/SVD 与 STM32F103C8T6 完全一致（CubeMX 选 ST 型号）。踩坑必读 skills/cks-pitfalls.md（重映射断调试口/野地址 HardFault）",
+  "memory": {
+    "flash": [
+      134217728,
+      134283264
+    ],
+    "sram": [
+      536870912,
+      536891392
+    ],
+    "fault_regs": {
+      "cfsr": "0xE000ED28",
+      "hfsr": "0xE000ED2C",
+      "mmfar": "0xE000ED34",
+      "bfar": "0xE000ED38"
+    }
+  }
+}
