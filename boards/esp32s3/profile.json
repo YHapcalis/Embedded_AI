@@ -1,0 +1,25 @@
+{
+  "mcu": "esp32s3",
+  "board": "ESP32-S3 DevKit（Xtensa LX7 双核）",
+  "arch": "xtensa",
+  "toolchain": "xtensa-esp32-elf-gcc",
+  "transport": "jtag",
+  "openocd": "esp32",
+  "openocd_cfg": "board/esp32s3-builtin.cfg",
+  "project_dir": "C:/Espressif/frameworks/esp-idf-v6.1/examples/get-started/hello_world",
+  "build_dir": "build",
+  "elf": "build/hello_world.elf",
+  "flash_sections": [],
+  "notes": "8MB Flash / 512KB SRAM；板载 USB-JTAG 无需外部调试器；构建走 idf.py，harness 侧经 OpenOCD(esp32 分支)调试",
+  "memory": {
+    "flash": [
+      0,
+      8388608
+    ],
+    "sram": [
+      1070071808,
+      1070596096
+    ],
+    "fault_regs": {}
+  }
+}
